@@ -1,7 +1,7 @@
 #/**
 #* ##############################################################
 #* library containing  utility functions
-#* Created by [Varshna Goelela]
+#* Created by Varshna Goelela
 #* Updated: 2011 July 6
 #* ##############################################################
 #**/
