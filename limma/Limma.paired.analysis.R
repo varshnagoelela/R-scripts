@@ -128,7 +128,7 @@ if (require(limma)) {
   lfc  = 0      #cutoff value for log2-fold-change
   nr   = Inf    #maximum number of probes to list
   
-  results = topTable(fit, 
+  results = topTable(fit2, 
                      coef    = contrast.fit,
                      adjust  = 'fdr',
                      lfc     = lfc,
