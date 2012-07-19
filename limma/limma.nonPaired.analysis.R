@@ -1,36 +1,33 @@
 #/**
 #* ##############################################################
 #* Limma analysis
-#* Created by Varshna Goelela
-#* Updated: 2012 July 12
+#* 2 group comparison
+#* Created by [Varshna Goelela]
+#* Updated: 2011 June 22
 #* ##############################################################
 #**/
 
 ## load source scripts
-source( "/Users/varshna/Documents/TNO/R scripts/Limma.lib.R")
+source( "/Users/varshna/Documents/TNO/R scripts/install.load.lib.R")
 
+# variables and lists
+#=====================
+#choose a species:
 sChoices <- c('Human','Mouse','Rat')
-species <- select.list(sChoices, title ="Select a species:")
+species <- select.list(sChoices)
 
-#folder containing the input files
-indir <- "/Users/varshna/Documents/TNO/VP1-ETEC studie/5. LIMMA comparison/input/"
-
-
-# name study
-ns <- "VP1-ETECstudy" 
-
-# create a list with all mandatory packages
 man <- c( paste( 'lumi', species,'IDMapping', sep=''),
           paste( 'lumi', species,'All.db', sep=''),
           "limma",
           "ggplot2",
-          "qvalue",
-          "statmod"
+          "qvalue", "statmod"
           )
 
-
+# name study
+ns  <- 'RosiPio'
 #System Date for filenaming
 dateTIME= format(Sys.time(), "%Y%m%d_%H%M%S")
+
 #libs
 lib.db <- paste( 'lumi', species,'All.db', sep='')
 lib.mapping <- paste( 'lumi', species,'IDMapping', sep='')
@@ -42,21 +39,26 @@ lib.mapping <- paste( 'lumi', species,'IDMapping', sep='')
 # load all the needed R library packages
 loadPackages(man)
 
-#create list of al the normData.Rdata file objects 
+#folder containing Rdata files
+indir <- "/Users/varshna/Documents/TNO/"
+
+#select normData Rdata file object
 Rdata <- c(list.files(indir, pattern = 'Rdata'))
 
 #load normData R object
-load(paste(indir, Rdata[1], sep=''))
+load(paste(indir, Rdata, sep=''))
 
-#create eset normData
+#extract eset matrix from lumiBatch object file
 data = exprs(normData)
-#create of nuIDs from normData
+#get list of nuIDs
 nuIDs <- rownames(data)
 
-#list text files in indir
-descFN <- list.files(indir, pattern = ".txt")
 
-descFile = paste(indir, descFN[1], sep = "")
+#list text files in desc. folder
+desc.table <- c(list.files(indir, pattern = 'description'))
+
+#load desc file
+descFile = paste(indir, desc.table[2], sep = "")
 description <- read.table(descFile,
                           header=T,  
                           stringsAsFactors = F,
@@ -65,7 +67,7 @@ description <- read.table(descFile,
 
 #check description file
 #Match sampleNames from datafile with first column from description file
-file_order <- match(description[,5],sampleNames(normData))
+file_order <- match(description[,2],sampleNames(data))
 #Check on NA values in file_order
 if(sum(is.na(file_order)) > 0) 
   stop("Assigned array names in raw data file and file names in description file do not match")
@@ -73,7 +75,7 @@ if(sum(is.na(file_order)) > 0)
 if(length(unique(file_order)) < length(file_order)) 
   stop("Assigned file names in description file are not unique")
 #Check if length values description file is the same as unique length values description file
-if(length(description[,5]) != length(unique(description[,5])) ) 
+if(length(description[,2]) != length(unique(description[,2])) ) 
   stop("Assigned sampleNames are not unique")
 
 cat("..::..::..\n", 
@@ -82,25 +84,23 @@ cat("..::..::..\n",
 #reorder description 2
 description = description[order(description$SampleNames),]
 
-# specify the Subject type for each column. 
-# collumns with the same name will be merged
-Subjects <- factor(description$Subjects)
+# Give levels. Will be the names (the unique names of the replicates) of the columns 
+lev <- c( sort(as.character(unique(description$Treatment))))
+lev
 
-# specify the Treatment type for each column. 
+# specify the sample type for each column. 
 # collumns with the same name will be merged
-Treatment <- factor(description$Treatment)
+sampleType <- description$Treatment
 
 # Name comparison
-#paste(levels(Treatment)[3:4],collapse="-")
-contrast.fit <- "TreatmentVSL3_22-TreatmenVSL3_20"
+contrast.fit <- "HFrosi-HF"
 
 if (require(limma)) {
-  #create design and apply first first fit and eBayes
-  design <- model.matrix(~0+Treatment)
-  corfit <- duplicateCorrelation(data, design, ndups=1, block=Subjects)
-  fit <- lmFit(data, design, block=Subjects, cor=corfit$consensus) 
+  design <- model.matrix(~0+factor(sampleType))
+  colnames(design) <- lev
+  fit <- lmFit(data, design) 
   fit <- eBayes(fit)
-  #compare 2 groups 
+  #compare 2 groups
   cont.matrix <- makeContrasts(contrast.fit, levels=design)
   fit2 <- contrasts.fit(fit,cont.matrix)
   fit2 <- eBayes(fit2)
@@ -132,11 +132,7 @@ if (require(limma)) {
   nr   = Inf    #maximum number of probes to list
   
   results = topTable(fit2, 
-<<<<<<< HEAD
                      coef    = contrast.fit,
-=======
-                     #coef    = contrast.fit,
->>>>>>> new limma scripts
                      adjust  = 'fdr',
                      lfc     = lfc,
                      p.value = pval,
@@ -156,3 +152,13 @@ write.table(results,
             row.names = FALSE, 
             quote     = FALSE, 
             sep       = '\t')
+
+#############################################
+#Gives ERROR back belongs in if statement!!
+#Get significant gene list with FDR adjusted p.values less than 0.01
+#Add all p.value to a list (p.adj)
+#p.adj <- p.adjust(fit2$p.value[,2])
+# create list with all p-value < 0.01
+#sigGene.adj <- nuIDs[ p.adj < 0.01]
+## without FDR adjustment
+#sigGene <- nuIDs[ fit2$p.value[,2] < 0.01]

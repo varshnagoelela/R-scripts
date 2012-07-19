@@ -1,7 +1,11 @@
 #/**
 #* ##############################################################
+<<<<<<< HEAD:limma/Limma.paired.analysis.lib.R
 #* library containing  utility functions
 #* Created by Varshna Goelela
+=======
+#* Created by [Varshna Goelela]
+>>>>>>> new limma scripts:limma/install.load.lib.R
 #* Updated: 2011 July 6
 #* ##############################################################
 #**/
