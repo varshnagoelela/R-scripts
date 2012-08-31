@@ -99,7 +99,6 @@ if (require(limma)) {
   design <- model.matrix(~0+factor(sampleType))
   colnames(design) <- lev
   fit <- lmFit(data, design) 
-  fit <- eBayes(fit)
   #compare 2 groups
   cont.matrix <- makeContrasts(contrast.fit, levels=design)
   fit2 <- contrasts.fit(fit,cont.matrix)

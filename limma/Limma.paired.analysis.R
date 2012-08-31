@@ -99,7 +99,6 @@ if (require(limma)) {
   design <- model.matrix(~0+Treatment)
   corfit <- duplicateCorrelation(data, design, ndups=1, block=Subjects)
   fit <- lmFit(data, design, block=Subjects, cor=corfit$consensus) 
-  fit <- eBayes(fit)
   #compare 2 groups 
   cont.matrix <- makeContrasts(contrast.fit, levels=design)
   fit2 <- contrasts.fit(fit,cont.matrix)
