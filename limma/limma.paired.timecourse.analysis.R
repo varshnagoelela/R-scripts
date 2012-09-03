@@ -1,35 +1,37 @@
 #/**
 #* ##############################################################
-#* Limma analysis
-#* 2 group comparison
-#* Created by [Varshna Goelela]
-#* Updated: 2011 June 22
+#* Limma analysis - paired samples
+#* Created by Varshna Goelela
+#* Updated: 2012 July 12
 #* ##############################################################
 #**/
 
 ## load source scripts
-source("/Users/varshna/Documents/TNO/R scripts/limma/install.load.lib.R")
-source("/Users/varshna/Documents/TNO/R scripts/limma/dateTime.R")
+source( "/Users/varshna/Documents/TNO/R scripts/limma/install.load.lib.R")
+source( "/Users/varshna/Documents/TNO/R scripts/limma/dateTime.R")
 
-# variables and lists
-#=====================
-#choose a species:
+
 sChoices <- c('Human','Mouse','Rat')
-species <- select.list(sChoices)
+species <- select.list(sChoices, title ="Select a species:")
 
+#folder containing the input files
+indir <- "/Users/varshna/Documents/TNO/vetteKip/TX/05.input Limma/"
 
-# name study
-ns  <- 'VetteKip'
+#name study
+ns <- "VetteKip"
+
 
 #libs
-lib.db <- paste('lumi',species,'All.db',sep='')
-lib.mapping <- paste('lumi',species,'IDMapping',sep='')
+lib.db <- paste( 'lumi', species,'All.db', sep='')
+lib.mapping <- paste( 'lumi', species,'IDMapping', sep='')
 
+# create a list with all mandatory packages
 man <- c( paste( 'lumi', species,'IDMapping', sep=''),
           paste( 'lumi', species,'All.db', sep=''),
           "limma",
           "ggplot2",
-          "qvalue", "statmod"
+          "qvalue",
+          "statmod"
           )
 
 #* ###############################################
@@ -39,32 +41,26 @@ man <- c( paste( 'lumi', species,'IDMapping', sep=''),
 # load all the needed R library packages
 loadPackages(man)
 
-#folder containing Rdata files
-indir <- "/Users/varshna/Documents/TNO/"
-
-#select normData Rdata file object
+#create list of al the normData.Rdata file objects 
 Rdata <- c(list.files(indir, pattern = 'Rdata'))
 
 #load normData R object
-load(paste(indir, Rdata, sep=''))
+load(paste(indir, Rdata[1], sep=''))
 
-#extract eset matrix from lumiBatch object file
+#create eset normData
 data = exprs(normData)
-#get list of nuIDs
+#create of nuIDs from normData
 nuIDs <- rownames(data)
 
+#list text files in indir
+descFN <- list.files(indir, pattern = ".txt")
 
-#list text files in desc. folder
-desc.table <- c(list.files(indir, pattern = 'description'))
-
-#load desc file
-descFile = paste(indir, desc.table[2], sep = "")
+descFile = paste(indir, select.list(descFN, title="Select a description file:"), sep = "")
 description <- read.table(descFile,
                           header=T,  
                           stringsAsFactors = F,
                           sep='\t',
                           quote="")
-
 
 
 #check description file
@@ -89,8 +85,6 @@ cat("..::..::..\n",
 #reorder description 2
 description = description[order(description[,hdr]),]
 
-
-
 # specify the Subject type for each column. 
 # collumns with the same name will be merged
 Subjects <- factor(description$subjectNR)
@@ -106,20 +100,20 @@ groupTime <- factor(description$groupTime)
 #determine levels groupTime
 lev=levels(groupTime)
 
-
-
 # Name comparison
-contrast.fit <- "HFpio-HF"
+#paste(levels(Treatment)[3:4],collapse="-")
+contrast.fit <- "Dif6hr (groupTimeH29.360-groupTimeH29.0)-(groupTimeH1.360-groupTimeH1.0)"
 
 if (require(limma)) {
-  # create design matrix
-  design <- model.matrix(~0+Treatment)
-  colnames(design) <- lev
-  rownames(design) <- description$sampleName
-  fit <- lmFit(data, design) 
-  #compare 2 groups
-  cont.matrix <- makeContrasts(contrast.fit, levels=design)
-  fit2 <- contrasts.fit(fit,cont.matrix)
+  #create design and apply first first fit and eBayes
+  design <- model.matrix(~0+groupTime)
+  corfit <- duplicateCorrelation(data, design, ndups=1, block=Subjects)
+  fit <- lmFit(data, design, block=Subjects, cor=corfit$consensus) 
+  #compare 2 groups 
+  cont.dif <- makeContrasts(
+    Dif6hr = (groupTimeH29.360-groupTimeH29.0)-(groupTimeH1.360-groupTimeH1.0),
+    levels=design)
+  fit2 <- contrasts.fit(fit,cont.dif)
   fit2 <- eBayes(fit2)
   #Add gene symbols to gene properties
   if ( require(lib.db,  character.only = T) & require(annotate)) {
@@ -149,7 +143,7 @@ if (require(limma)) {
   nr   = Inf    #maximum number of probes to list
   
   results = topTable(fit2, 
-                     coef    = contrast.fit,
+                     #coef    = contrast.fit,
                      adjust  = 'fdr',
                      lfc     = lfc,
                      p.value = pval,
@@ -163,9 +157,8 @@ qobj <- qvalue(results$P.Value)
 results$q.Value <- qobj$qvalues
 
 #Write results in tab-delimeted table
-
-results_fn = paste(sub("input", "output", indir),paste('LIMMA', ns, "nonPaired", contrast.fit, x=dateTime(), 'txt', sep='.'), sep="" )
-write.table(results,  
+results_fn = paste(sub("input", "output", indir),paste('LIMMA', ns, "paired", contrast.fit, x=dateTime(), 'txt', sep='.'), sep="" )
+write.table(results, 
             file      = results_fn,
             row.names = FALSE, 
             quote     = FALSE, 

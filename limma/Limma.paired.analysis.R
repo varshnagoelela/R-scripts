@@ -1,23 +1,29 @@
 #/**
 #* ##############################################################
-#* Limma analysis
+#* Limma analysis - paired samples
 #* Created by Varshna Goelela
 #* Updated: 2012 July 12
 #* ##############################################################
 #**/
 
 ## load source scripts
-source( "/Users/varshna/Documents/TNO/R scripts/Limma.lib.R")
+source( "/Users/varshna/Documents/TNO/R scripts/limma/install.load.lib.R")
+source( "/Users/varshna/Documents/TNO/R scripts/limma/dateTime.R")
+
 
 sChoices <- c('Human','Mouse','Rat')
 species <- select.list(sChoices, title ="Select a species:")
 
 #folder containing the input files
-indir <- "/Users/varshna/Documents/TNO/VP1-ETEC studie/5. LIMMA comparison/input/"
+indir <- "/Users/varshna/Documents/TNO/vetteKip/TX/05.input Limma/"
+
+#name study
+ns <- "VetteKip"
 
 
-# name study
-ns <- "VP1-ETECstudy" 
+#libs
+lib.db <- paste( 'lumi', species,'All.db', sep='')
+lib.mapping <- paste( 'lumi', species,'IDMapping', sep='')
 
 # create a list with all mandatory packages
 man <- c( paste( 'lumi', species,'IDMapping', sep=''),
@@ -27,13 +33,6 @@ man <- c( paste( 'lumi', species,'IDMapping', sep=''),
           "qvalue",
           "statmod"
           )
-
-
-#System Date for filenaming
-dateTIME= format(Sys.time(), "%Y%m%d_%H%M%S")
-#libs
-lib.db <- paste( 'lumi', species,'All.db', sep='')
-lib.mapping <- paste( 'lumi', species,'IDMapping', sep='')
 
 #* ###############################################
 # Veranderen in fuctie
@@ -63,9 +62,14 @@ description <- read.table(descFile,
                           sep='\t',
                           quote="")
 
+
+
 #check description file
+#which column is the sample name
+hdr = select.list(names(description), title = "Select the column with the sample names:")
+
 #Match sampleNames from datafile with first column from description file
-file_order <- match(description[,5],sampleNames(normData))
+file_order <- match(description[,hdr],sampleNames(normData))
 #Check on NA values in file_order
 if(sum(is.na(file_order)) > 0) 
   stop("Assigned array names in raw data file and file names in description file do not match")
@@ -73,30 +77,37 @@ if(sum(is.na(file_order)) > 0)
 if(length(unique(file_order)) < length(file_order)) 
   stop("Assigned file names in description file are not unique")
 #Check if length values description file is the same as unique length values description file
-if(length(description[,5]) != length(unique(description[,5])) ) 
+if(length(description[,hdr]) != length(unique(description[,hdr])) ) 
   stop("Assigned sampleNames are not unique")
 
 cat("..::..::..\n", 
     "DISCRIPTION FILE OK!\n", sep="")
 
 #reorder description 2
-description = description[order(description$SampleNames),]
+description = description[order(description[,hdr]),]
 
 # specify the Subject type for each column. 
 # collumns with the same name will be merged
-Subjects <- factor(description$Subjects)
+Subjects <- factor(description$subjectNR)
 
 # specify the Treatment type for each column. 
 # collumns with the same name will be merged
-Treatment <- factor(description$Treatment)
+Treatment <- factor(description$subGroupName)
+
+#specify each timePoint for every sample
+# collumns with the same name will be merged
+groupTime <- factor(description$groupTime)
+
+#determine levels groupTime
+lev=levels(groupTime)
 
 # Name comparison
 #paste(levels(Treatment)[3:4],collapse="-")
-contrast.fit <- "TreatmentVSL3_22-TreatmenVSL3_20"
+contrast.fit <- "groupTimeH29.0-groupTimeH1.0"
 
 if (require(limma)) {
   #create design and apply first first fit and eBayes
-  design <- model.matrix(~0+Treatment)
+  design <- model.matrix(~0+groupTime)
   corfit <- duplicateCorrelation(data, design, ndups=1, block=Subjects)
   fit <- lmFit(data, design, block=Subjects, cor=corfit$consensus) 
   #compare 2 groups 
@@ -131,11 +142,7 @@ if (require(limma)) {
   nr   = Inf    #maximum number of probes to list
   
   results = topTable(fit2, 
-<<<<<<< HEAD
-                     coef    = contrast.fit,
-=======
                      #coef    = contrast.fit,
->>>>>>> new limma scripts
                      adjust  = 'fdr',
                      lfc     = lfc,
                      p.value = pval,
@@ -149,7 +156,7 @@ qobj <- qvalue(results$P.Value)
 results$q.Value <- qobj$qvalues
 
 #Write results in tab-delimeted table
-results_fn = paste('LIMMA', ns, contrast.fit, dateTIME, 'txt', sep='.')
+results_fn = paste(sub("input", "output", indir),paste('LIMMA', ns, "paired", contrast.fit, x=dateTime(), 'txt', sep='.'), sep="" )
 write.table(results, 
             file      = results_fn,
             row.names = FALSE, 
