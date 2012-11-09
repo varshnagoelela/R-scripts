@@ -52,3 +52,16 @@ venndia <- function(A, B, C, getdata=FALSE, ...){
     )
   }
 }
+
+#create matrix venn from unions and intersects
+vennMatrix = matrix("", ncol = length(venn), nrow = max(sapply(venn, length)))
+colnames(vennMatrix) = names(venn)
+for(n in names(venn)) vennMatrix[1:length(venn[[n]]), n] = venn[[n]]
+
+#save vennMatrix
+vennMatrix_fn = paste("vennList", dateTIME= format(Sys.time(), "%Y%m%d_%H%M%S"), ".txt", sep="_")
+write.table(vennMatrix, 
+            file      = vennMatrix_fn,
+            col.names = TRUE,
+            quote     = FALSE, 
+            sep       = '\t')
