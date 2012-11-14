@@ -1,3 +1,7 @@
+#library(devtools)
+#source_url('https://github.com/varshnagoelela/R-scripts/master/3venn.diagram.R')
+
+
 circle <- function(x, y, r, ...) {
   ang <- seq(0, 2*pi, length = 100)
   xx <- x + r * cos(ang)
@@ -52,6 +56,11 @@ venndia <- function(A, B, C, getdata=FALSE, ...){
     )
   }
 }
+
+A=LETTERS[1:15] 
+B=LETTERS[5:20]
+C=LETTERS[1:10]
+venn = venndia(A=A , B=B , C=C , getdata=T )
 
 #create matrix venn from unions and intersects
 vennMatrix = matrix("", ncol = length(venn), nrow = max(sapply(venn, length)))
